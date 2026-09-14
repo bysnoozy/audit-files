@@ -14,6 +14,8 @@
             <Button Content="Annuler" Width="100" Margin="0,0,8,0" Command="{Binding CancelScanCommand}" />
             <Button Content="Exporter CSV" Width="120" Margin="0,0,8,0" Click="ExportCsv_Click" IsEnabled="{Binding CanExport}" />
             <Button Content="Exporter HTML" Width="120" Margin="0,0,8,0" Click="ExportHtml_Click" IsEnabled="{Binding CanExport}" />
+            <Button Name="PdfExportButton" Content="Exporter PDF client" Width="140" Margin="0,0,8,0" Click="ExportPdf_Click" IsEnabled="{Binding CanExport}"
+                    ToolTip.Tip="Rapport de synthèse propre, à remettre au client : actions à réaliser et détail des anomalies par catégorie." />
             <TextBlock Text="{Binding ProgressText}" VerticalAlignment="Center" Margin="16,0,0,0" Foreground="#555555" />
         </StackPanel>
 

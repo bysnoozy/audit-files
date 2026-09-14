@@ -90,4 +90,41 @@ public partial class MainWindow : Window
             ViewModel.StatusText = $"Rapport HTML enregistré : {file.Path.LocalPath}";
         }
     }
+
+    private async void ExportPdf_Click(object? sender, RoutedEventArgs e)
+    {
+        var result = ViewModel.LastResult;
+        if (result is null)
+        {
+            return;
+        }
+
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel is null)
+        {
+            return;
+        }
+
+        var file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Exporter le rapport PDF client",
+            SuggestedFileName = "rapport-audit-client.pdf",
+            FileTypeChoices = new[] { new FilePickerFileType("Rapport PDF") { Patterns = new[] { "*.pdf" } } },
+        });
+
+        if (file is null)
+        {
+            return;
+        }
+
+        try
+        {
+            PdfReportWriter.WriteClientReport(result, file.Path.LocalPath);
+            ViewModel.StatusText = $"Rapport PDF client enregistré : {file.Path.LocalPath}";
+        }
+        catch (InvalidOperationException ex)
+        {
+            ViewModel.StatusText = $"Impossible de générer le PDF : {ex.Message}";
+        }
+    }
 }
