@@ -105,6 +105,20 @@ internal sealed class PdfLayoutBuilder
     }
 
     /// <summary>
+    /// Draws a single bulleted line (a "case by case" list item, e.g. one affected file path).
+    /// Callers are expected to pre-shorten <paramref name="text"/> so it fits on one line; call
+    /// <see cref="EnsureSpace"/> with <paramref name="lineHeight"/> first so long lists can flow
+    /// across a page break.
+    /// </summary>
+    public void DrawListItem(string text, XFont font, XBrush brush, double lineHeight)
+    {
+        const double bulletWidth = 12;
+        _gfx.DrawString("•", font, brush, new XRect(MarginLeft, _y, bulletWidth, lineHeight), XStringFormats.TopLeft);
+        _gfx.DrawString(text, font, brush, new XRect(MarginLeft + bulletWidth, _y, ContentWidth - bulletWidth, lineHeight), XStringFormats.TopLeft);
+        _y += lineHeight;
+    }
+
+    /// <summary>
     /// Draws a small filled square marker (used as a severity indicator) at the left margin, vertically
     /// centered on a line of the given height.
     /// </summary>

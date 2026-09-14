@@ -7,14 +7,12 @@ namespace AuditFiles.Core.Reporting;
 
 /// <summary>
 /// Produces a clean, client-facing PDF summary of an audit: key volumetry figures, a short synthesis,
-/// and one section per anomaly category with the recommended action and a few example paths. Unlike
-/// the CSV/HTML exports, this intentionally does not list every single anomalous file - it is meant
-/// to be handed to a client alongside (not instead of) the detailed CSV/HTML export.
+/// and one section per anomaly category with the recommended action followed by the full, itemized
+/// list of every affected file/folder in that category (sorted, one per line). The full list can span
+/// as many pages as needed.
 /// </summary>
 public static class PdfReportWriter
 {
-    private const int MaxExamplesPerCategory = 3;
-
     public static void WriteClientReport(ScanResult result, string filePath)
     {
         EnsureFontResolver();
@@ -31,6 +29,7 @@ public static class PdfReportWriter
         var categoryTitleFont = new XFont(ClientReportFontResolver.Family, 11.5, XFontStyleEx.Bold);
         var bodyFont = new XFont(ClientReportFontResolver.Family, 10);
         var smallFont = new XFont(ClientReportFontResolver.Family, 8.5, XFontStyleEx.Italic);
+        var listFont = new XFont(ClientReportFontResolver.Family, 9);
         var kpiValueFont = new XFont(ClientReportFontResolver.Family, 17, XFontStyleEx.Bold);
         var kpiLabelFont = new XFont(ClientReportFontResolver.Family, 8.5);
 
@@ -49,7 +48,7 @@ public static class PdfReportWriter
                 g.Key,
                 g.Count(),
                 g.Max(i => i.Severity),
-                g.Select(i => i.RelativePath).Distinct().Take(MaxExamplesPerCategory).ToList()))
+                g.Select(i => i.RelativePath).Distinct().OrderBy(p => p, StringComparer.OrdinalIgnoreCase).ToList()))
             .OrderByDescending(c => c.Severity)
             .ThenByDescending(c => c.Count)
             .ToList();
@@ -91,7 +90,7 @@ public static class PdfReportWriter
 
             foreach (var category in categories)
             {
-                DrawCategorySection(b, category, categoryTitleFont, bodyFont, smallFont, blockingColor, warningColor, gray);
+                DrawCategorySection(b, category, categoryTitleFont, bodyFont, listFont, blockingColor, warningColor, gray);
             }
         }
 
@@ -122,7 +121,7 @@ public static class PdfReportWriter
         CategorySummary category,
         XFont titleFont,
         XFont bodyFont,
-        XFont smallFont,
+        XFont listFont,
         XBrush blockingColor,
         XBrush warningColor,
         XBrush grayBrush)
@@ -133,32 +132,27 @@ public static class PdfReportWriter
         var countText = category.Count == 1 ? "1 élément concerné" : $"{category.Count:N0} éléments concernés";
         var actionText = "Action recommandée : " + action;
 
-        var examplesText = category.SampleRelativePaths.Count == 0
-            ? null
-            : "Exemples : " + string.Join("  •  ", category.SampleRelativePaths.Select(p => ShortenPath(p))) +
-              (category.Count > category.SampleRelativePaths.Count
-                  ? $"  •  … et {category.Count - category.SampleRelativePaths.Count} de plus"
-                  : string.Empty);
-
         const double titleLineHeight = 18;
         var actionHeight = b.MeasureWrappedHeight(actionText, bodyFont);
-        var examplesHeight = examplesText is null ? 0 : b.MeasureWrappedHeight(examplesText, smallFont) + 4;
-        var totalHeight = titleLineHeight + actionHeight + examplesHeight + 18;
 
-        b.EnsureSpace(totalHeight);
+        // The header and action text must stay together; the itemized list below is drawn one line
+        // at a time and is free to flow across a page break on its own.
+        b.EnsureSpace(titleLineHeight + actionHeight + 18);
 
         b.DrawMarker(severityColor, titleLineHeight);
         b.DrawLabelValueLine("     " + label, countText, titleFont, XBrushes.Black, titleLineHeight);
-
         b.DrawWrapped(actionText, bodyFont, XBrushes.Black);
+        b.AddSpace(6);
 
-        if (examplesText is not null)
+        var listLineHeight = listFont.GetHeight() + 3;
+        foreach (var path in category.AllRelativePaths)
         {
-            b.AddSpace(4);
-            b.DrawWrapped(examplesText, smallFont, grayBrush);
+            b.EnsureSpace(listLineHeight);
+            b.DrawListItem(ShortenPath(path, 100), listFont, grayBrush, listLineHeight);
         }
 
         b.AddSpace(8);
+        b.EnsureSpace(2);
         b.DrawSeparator();
         b.AddSpace(10);
     }
@@ -213,5 +207,5 @@ public static class PdfReportWriter
         AuditIssueType Type,
         int Count,
         AuditSeverity Severity,
-        IReadOnlyList<string> SampleRelativePaths);
+        IReadOnlyList<string> AllRelativePaths);
 }

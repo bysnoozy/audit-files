@@ -71,11 +71,10 @@ L'application permet de :
 2. lancer l'analyse (asynchrone, annulable, avec suivi de progression),
 3. consulter la volumétrie et la liste des anomalies détectées,
 4. exporter les anomalies en CSV, un rapport technique complet en HTML, ou un **rapport PDF de
-   synthèse à remettre au client** : volumétrie, synthèse, et détail par catégorie d'anomalie avec
-   l'action recommandée et quelques exemples de chemins concernés (`PdfReportWriter`, dans
-   `AuditFiles.Core`). Contrairement aux exports CSV/HTML, ce PDF ne liste pas chaque fichier
-   individuellement : il est pensé pour être lisible par un client non technique, en complément du
-   CSV/HTML détaillé plutôt qu'à sa place.
+   synthèse à remettre au client** (`PdfReportWriter`, dans `AuditFiles.Core`) : volumétrie, synthèse,
+   puis pour chaque catégorie d'anomalie l'action recommandée en langage clair suivie de la liste
+   complète, cas par cas, de tous les éléments concernés (triés, un par ligne). La liste peut
+   s'étendre sur autant de pages que nécessaire.
 
 ## Intégration continue
 
