@@ -1,0 +1,36 @@
+name: Build and test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  core-tests:
+    name: Build & test Core (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Restore
+        run: dotnet restore src/AuditFiles.Core/AuditFiles.Core.csproj tests/AuditFiles.Core.Tests/AuditFiles.Core.Tests.csproj
+      - name: Build Core
+        run: dotnet build src/AuditFiles.Core/AuditFiles.Core.csproj --no-restore -c Release
+      - name: Test
+        run: dotnet test tests/AuditFiles.Core.Tests/AuditFiles.Core.Tests.csproj --no-restore -c Release
+
+  windows-app:
+    name: Build Windows app
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Restore
+        run: dotnet restore AuditFiles.sln
+      - name: Build
+        run: dotnet build AuditFiles.sln --no-restore -c Release
