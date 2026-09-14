@@ -1,31 +1,19 @@
-<Window x:Class="AuditFiles.App.MainWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vm="clr-namespace:AuditFiles.App.ViewModels"
-        Title="Audit de migration SharePoint" Height="700" Width="1100" MinWidth="800" MinHeight="500">
-    <Window.DataContext>
-        <vm:MainViewModel />
-    </Window.DataContext>
-    <Grid Margin="12">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
-
+        x:Class="AuditFiles.App.MainWindow"
+        Title="Audit de migration SharePoint" Width="1100" Height="700" MinWidth="800" MinHeight="500">
+    <Grid Margin="12" RowDefinitions="Auto,Auto,Auto,*,Auto">
         <DockPanel Grid.Row="0" Margin="0,0,0,8">
-            <Button DockPanel.Dock="Right" Content="Parcourir..." Width="100" Margin="8,0,0,0" Command="{Binding BrowseCommand}" />
+            <Button DockPanel.Dock="Right" Content="Parcourir..." Width="100" Margin="8,0,0,0" Click="Browse_Click" />
             <TextBlock DockPanel.Dock="Left" Text="Dossier :" VerticalAlignment="Center" Margin="0,0,8,0" />
-            <TextBox Text="{Binding RootPath, UpdateSourceTrigger=PropertyChanged}" VerticalContentAlignment="Center" />
+            <TextBox Text="{Binding RootPath}" VerticalContentAlignment="Center" />
         </DockPanel>
 
         <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8">
             <Button Content="Lancer l'audit" Width="120" Margin="0,0,8,0" Command="{Binding StartScanCommand}" />
             <Button Content="Annuler" Width="100" Margin="0,0,8,0" Command="{Binding CancelScanCommand}" />
-            <Button Content="Exporter CSV" Width="120" Margin="0,0,8,0" Command="{Binding ExportCsvCommand}" />
-            <Button Content="Exporter HTML" Width="120" Margin="0,0,8,0" Command="{Binding ExportHtmlCommand}" />
+            <Button Content="Exporter CSV" Width="120" Margin="0,0,8,0" Click="ExportCsv_Click" IsEnabled="{Binding CanExport}" />
+            <Button Content="Exporter HTML" Width="120" Margin="0,0,8,0" Click="ExportHtml_Click" IsEnabled="{Binding CanExport}" />
             <TextBlock Text="{Binding ProgressText}" VerticalAlignment="Center" Margin="16,0,0,0" Foreground="#555555" />
         </StackPanel>
 
@@ -56,7 +44,7 @@
             </Border>
         </UniformGrid>
 
-        <DataGrid Grid.Row="3" ItemsSource="{Binding Issues}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False">
+        <DataGrid Grid.Row="3" ItemsSource="{Binding Issues}" AutoGenerateColumns="False" IsReadOnly="True">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Sévérité" Binding="{Binding Severity}" Width="90" />
                 <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="200" />

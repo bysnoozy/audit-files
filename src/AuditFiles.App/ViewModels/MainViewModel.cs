@@ -2,9 +2,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using AuditFiles.Core.Models;
-using AuditFiles.Core.Reporting;
 using AuditFiles.Core.Scanning;
-using Microsoft.Win32;
 
 namespace AuditFiles.App.ViewModels;
 
@@ -12,7 +10,6 @@ public sealed class MainViewModel : INotifyPropertyChanged
 {
     private readonly FileSystemScanner _scanner = new();
     private CancellationTokenSource? _cancellationTokenSource;
-    private ScanResult? _lastResult;
 
     private string _rootPath = string.Empty;
     private string _statusText = "Sélectionnez un dossier à auditer.";
@@ -22,38 +19,39 @@ public sealed class MainViewModel : INotifyPropertyChanged
     private string _totalFolders = "-";
     private string _totalSize = "-";
     private string _issueCount = "-";
+    private ScanResult? _lastResult;
 
     public MainViewModel()
     {
-        BrowseCommand = new RelayCommand(_ => Browse());
         StartScanCommand = new RelayCommand(async _ => await StartScanAsync(), _ => !IsScanning && !string.IsNullOrWhiteSpace(RootPath));
         CancelScanCommand = new RelayCommand(_ => Cancel(), _ => IsScanning);
-        ExportCsvCommand = new RelayCommand(_ => ExportCsv(), _ => _lastResult is not null);
-        ExportHtmlCommand = new RelayCommand(_ => ExportHtml(), _ => _lastResult is not null);
     }
 
     public ObservableCollection<AuditIssue> Issues { get; } = new();
-
-    public RelayCommand BrowseCommand { get; }
 
     public RelayCommand StartScanCommand { get; }
 
     public RelayCommand CancelScanCommand { get; }
 
-    public RelayCommand ExportCsvCommand { get; }
-
-    public RelayCommand ExportHtmlCommand { get; }
-
     public string RootPath
     {
         get => _rootPath;
-        set => SetField(ref _rootPath, value);
+        set
+        {
+            if (SetField(ref _rootPath, value))
+            {
+                StartScanCommand.RaiseCanExecuteChanged();
+            }
+        }
     }
 
+    /// <summary>
+    /// Settable from the view's code-behind after an export dialog completes.
+    /// </summary>
     public string StatusText
     {
         get => _statusText;
-        private set => SetField(ref _statusText, value);
+        internal set => SetField(ref _statusText, value);
     }
 
     public string ProgressText
@@ -65,7 +63,14 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public bool IsScanning
     {
         get => _isScanning;
-        private set => SetField(ref _isScanning, value);
+        private set
+        {
+            if (SetField(ref _isScanning, value))
+            {
+                StartScanCommand.RaiseCanExecuteChanged();
+                CancelScanCommand.RaiseCanExecuteChanged();
+            }
+        }
     }
 
     public string TotalFiles
@@ -92,19 +97,22 @@ public sealed class MainViewModel : INotifyPropertyChanged
         private set => SetField(ref _issueCount, value);
     }
 
-    private void Browse()
+    /// <summary>
+    /// Read by the view's code-behind to feed the CSV/HTML export dialogs.
+    /// </summary>
+    public ScanResult? LastResult
     {
-        var dialog = new System.Windows.Forms.FolderBrowserDialog
+        get => _lastResult;
+        private set
         {
-            Description = "Sélectionnez le dossier racine à auditer",
-            UseDescriptionForTitle = true,
-        };
-
-        if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
-        {
-            RootPath = dialog.SelectedPath;
+            if (SetField(ref _lastResult, value))
+            {
+                OnPropertyChanged(nameof(CanExport));
+            }
         }
     }
+
+    public bool CanExport => LastResult is not null;
 
     private async Task StartScanAsync()
     {
@@ -112,7 +120,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         IsScanning = true;
         StatusText = "Analyse en cours...";
         Issues.Clear();
-        _lastResult = null;
+        LastResult = null;
 
         var options = new ScanOptions { RootPath = RootPath };
         var progress = new Progress<ScanProgress>(p =>
@@ -125,8 +133,6 @@ public sealed class MainViewModel : INotifyPropertyChanged
             var result = await Task.Run(
                 () => _scanner.Scan(options, progress, _cancellationTokenSource.Token),
                 _cancellationTokenSource.Token);
-
-            _lastResult = result;
 
             foreach (var issue in result.Issues)
             {
@@ -141,6 +147,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
             StatusText = result.Errors.Count > 0
                 ? $"Analyse terminée avec {result.Errors.Count} erreur(s) de lecture."
                 : "Analyse terminée.";
+
+            LastResult = result;
         }
         catch (OperationCanceledException)
         {
@@ -162,46 +170,6 @@ public sealed class MainViewModel : INotifyPropertyChanged
         _cancellationTokenSource?.Cancel();
     }
 
-    private void ExportCsv()
-    {
-        if (_lastResult is null)
-        {
-            return;
-        }
-
-        var dialog = new SaveFileDialog
-        {
-            Filter = "Fichier CSV (*.csv)|*.csv",
-            FileName = "audit-anomalies.csv",
-        };
-
-        if (dialog.ShowDialog() == true)
-        {
-            CsvReportWriter.WriteIssues(_lastResult, dialog.FileName);
-            StatusText = $"Export CSV enregistré : {dialog.FileName}";
-        }
-    }
-
-    private void ExportHtml()
-    {
-        if (_lastResult is null)
-        {
-            return;
-        }
-
-        var dialog = new SaveFileDialog
-        {
-            Filter = "Rapport HTML (*.html)|*.html",
-            FileName = "rapport-audit.html",
-        };
-
-        if (dialog.ShowDialog() == true)
-        {
-            HtmlReportWriter.WriteReport(_lastResult, dialog.FileName);
-            StatusText = $"Rapport HTML enregistré : {dialog.FileName}";
-        }
-    }
-
     private static string FormatBytes(long bytes)
     {
         string[] units = { "o", "Ko", "Mo", "Go", "To" };
@@ -218,14 +186,18 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    private void SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
+    private void OnPropertyChanged(string propertyName) =>
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+    private bool SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
     {
         if (EqualityComparer<T>.Default.Equals(field, value))
         {
-            return;
+            return false;
         }
 
         field = value;
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        OnPropertyChanged(propertyName!);
+        return true;
     }
 }

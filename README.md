@@ -1,10 +1,15 @@
 # AuditFiles
 
-Application Windows (.NET 8 / WPF) pour auditer une arborescence de fichiers **avant une migration
-vers SharePoint Online / OneDrive** : détection des chemins trop longs, caractères et noms interdits,
-types de fichiers bloqués, fichiers trop volumineux, imbrication excessive, doublons de noms ne
-différant que par la casse, ainsi qu'un rapport de volumétrie (nombre de fichiers/dossiers, taille
-totale, répartition par extension, fichiers les plus volumineux).
+Application de bureau (.NET 8 / Avalonia UI) pour auditer une arborescence de fichiers **avant une
+migration vers SharePoint Online / OneDrive** : détection des chemins trop longs, caractères et
+noms interdits, types de fichiers bloqués, fichiers trop volumineux, imbrication excessive,
+doublons de noms ne différant que par la casse, ainsi qu'un rapport de volumétrie (nombre de
+fichiers/dossiers, taille totale, répartition par extension, fichiers les plus volumineux).
+
+L'application cible avant tout **Windows** (c'est l'usage prévu : auditer un partage de fichiers
+Windows avant migration), mais s'appuie sur Avalonia UI plutôt que WPF afin de pouvoir être
+compilée, testée et exécutée en mode headless sur n'importe quelle plateforme (Linux/macOS inclus),
+tout en produisant un exécutable Windows natif (`AuditFiles.App.exe`) via `dotnet publish -r win-x64`.
 
 ## Structure du projet
 
@@ -13,7 +18,7 @@ AuditFiles.sln
 src/
   AuditFiles.Core/     Bibliothèque .NET 8 (multiplateforme) : moteur de scan, règles d'audit,
                         exports CSV/HTML. Ne dépend d'aucun package NuGet externe.
-  AuditFiles.App/      Application WPF (net8.0-windows) : interface graphique Windows qui
+  AuditFiles.App/      Application de bureau Avalonia UI (net8.0, multiplateforme) qui
                         s'appuie sur AuditFiles.Core.
 tests/
   AuditFiles.Core.Tests/  Tests unitaires (xUnit) du moteur de scan et des règles d'audit.
@@ -44,14 +49,21 @@ Le rapport distingue les anomalies **bloquantes** (empêcheraient la migration t
 
 ## Compiler et exécuter
 
-Nécessite le [SDK .NET 8](https://dotnet.microsoft.com/download/dotnet/8.0).
+Nécessite le [SDK .NET 8](https://dotnet.microsoft.com/download/dotnet/8.0). Toute la solution
+(bibliothèque **et** application graphique) compile et se lance sur Windows, Linux et macOS.
 
-```powershell
-# Restaurer et lancer les tests de la bibliothèque Core (multiplateforme)
+```bash
+# Compiler toute la solution
+dotnet build AuditFiles.sln
+
+# Lancer les tests de la bibliothèque Core
 dotnet test tests/AuditFiles.Core.Tests/AuditFiles.Core.Tests.csproj
 
-# Compiler et lancer l'application Windows (nécessite Windows)
+# Lancer l'application graphique sur la plateforme courante
 dotnet run --project src/AuditFiles.App/AuditFiles.App.csproj
+
+# Produire un exécutable Windows natif (fonctionne même depuis Linux/macOS)
+dotnet publish src/AuditFiles.App/AuditFiles.App.csproj -c Release -r win-x64 --self-contained false
 ```
 
 L'application permet de :
@@ -62,8 +74,9 @@ L'application permet de :
 
 ## Intégration continue
 
-`.github/workflows/build.yml` compile et teste `AuditFiles.Core` sous Linux, et compile
-l'ensemble de la solution (y compris l'application WPF) sous Windows, à chaque push/PR sur `main`.
+`.github/workflows/build.yml` compile et teste l'ensemble de la solution (bibliothèque Core et
+application Avalonia) sous Linux, et publie un exécutable Windows natif (`win-x64`) sous Windows,
+à chaque push/PR sur `main`.
 
 ## Limites connues
 

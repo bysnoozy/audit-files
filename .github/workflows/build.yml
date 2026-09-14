@@ -7,24 +7,9 @@ on:
     branches: [ main ]
 
 jobs:
-  core-tests:
-    name: Build & test Core (Linux)
+  build-and-test:
+    name: Build & test (Linux)
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
-      - name: Restore
-        run: dotnet restore src/AuditFiles.Core/AuditFiles.Core.csproj tests/AuditFiles.Core.Tests/AuditFiles.Core.Tests.csproj
-      - name: Build Core
-        run: dotnet build src/AuditFiles.Core/AuditFiles.Core.csproj --no-restore -c Release
-      - name: Test
-        run: dotnet test tests/AuditFiles.Core.Tests/AuditFiles.Core.Tests.csproj --no-restore -c Release
-
-  windows-app:
-    name: Build Windows app
-    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -34,3 +19,21 @@ jobs:
         run: dotnet restore AuditFiles.sln
       - name: Build
         run: dotnet build AuditFiles.sln --no-restore -c Release
+      - name: Test
+        run: dotnet test tests/AuditFiles.Core.Tests/AuditFiles.Core.Tests.csproj --no-restore -c Release
+
+  publish-windows:
+    name: Publish Windows executable
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Publish win-x64
+        run: dotnet publish src/AuditFiles.App/AuditFiles.App.csproj -c Release -r win-x64 --self-contained false -o publish/win-x64
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AuditFiles-win-x64
+          path: publish/win-x64
