@@ -43,7 +43,7 @@ public class FileSystemScannerTests : IDisposable
     public void Scan_FlagsBlockedFileTypeAndInvalidCharacters()
     {
         File.WriteAllText(Path.Combine(_tempRoot, "setup.exe"), "binary");
-        File.WriteAllText(Path.Combine(_tempRoot, "100%done.txt"), "content");
+        File.WriteAllText(Path.Combine(_tempRoot, "brace{name}.txt"), "content");
 
         var scanner = new FileSystemScanner();
         var options = new ScanOptions { RootPath = _tempRoot };
@@ -51,7 +51,7 @@ public class FileSystemScannerTests : IDisposable
         var result = scanner.Scan(options);
 
         Assert.Contains(result.Issues, i => i.Type == AuditIssueType.BlockedFileType && i.RelativePath == "setup.exe");
-        Assert.Contains(result.Issues, i => i.Type == AuditIssueType.InvalidCharacterInName && i.RelativePath == "100%done.txt");
+        Assert.Contains(result.Issues, i => i.Type == AuditIssueType.InvalidCharacterInName && i.RelativePath == "brace{name}.txt");
     }
 
     [Fact]

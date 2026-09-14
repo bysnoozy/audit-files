@@ -20,9 +20,10 @@ public sealed class ScanOptions
     public int ReservedUrlPrefixLength { get; init; } = 100;
 
     /// <summary>
-    /// Maximum length, in characters, of a single file or folder name.
+    /// Maximum length, in characters, of a single file or folder name. Microsoft documents this as
+    /// 255 characters, separate from the 400-character full-path limit above.
     /// </summary>
-    public int MaxNameLength { get; init; } = 400;
+    public int MaxNameLength { get; init; } = 255;
 
     /// <summary>
     /// Maximum file size, in bytes. Defaults to 250 GB, the SharePoint Online / OneDrive upload

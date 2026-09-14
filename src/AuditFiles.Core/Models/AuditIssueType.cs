@@ -6,6 +6,7 @@ public enum AuditIssueType
     InvalidCharacterInName,
     NameStartsOrEndsWithSpace,
     NameEndsWithPeriod,
+    ConsecutivePeriodsInName,
     NameTooLong,
     ReservedName,
     BlockedFileType,

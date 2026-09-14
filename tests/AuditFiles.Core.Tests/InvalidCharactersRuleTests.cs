@@ -10,9 +10,16 @@ public class InvalidCharactersRuleTests
     private readonly ScanOptions _options = new() { RootPath = "C:\\root" };
 
     [Theory]
-    [InlineData("report#2024.docx")]
-    [InlineData("100% final.xlsx")]
     [InlineData("plan:v2.pptx")]
+    [InlineData("quote\"final.docx")]
+    [InlineData("wildcard*.xlsx")]
+    [InlineData("path/like.txt")]
+    [InlineData("back\\slash.txt")]
+    [InlineData("pipe|delimited.csv")]
+    [InlineData("less<than.txt")]
+    [InlineData("greater>than.txt")]
+    [InlineData("question?.txt")]
+    [InlineData("curly{brace}.txt")]
     public void Evaluate_NameWithInvalidCharacter_ReturnsIssue(string name)
     {
         var entry = MakeEntry(name);
@@ -23,10 +30,16 @@ public class InvalidCharactersRuleTests
         Assert.Equal(AuditIssueType.InvalidCharacterInName, issue.Type);
     }
 
-    [Fact]
-    public void Evaluate_ValidName_ReturnsNoIssue()
+    [Theory]
+    [InlineData("report#2024.docx")]
+    [InlineData("100% final.xlsx")]
+    [InlineData("Annual Report 2024.docx")]
+    public void Evaluate_ValidName_ReturnsNoIssue(string name)
     {
-        var entry = MakeEntry("Annual Report 2024.docx");
+        // '#' and '%' are supported by default in OneDrive/SharePoint in Microsoft 365 (only
+        // blocked if a tenant admin explicitly disables special-character support), so they must
+        // not be flagged.
+        var entry = MakeEntry(name);
 
         var issues = _rule.Evaluate(entry, _options).ToList();
 

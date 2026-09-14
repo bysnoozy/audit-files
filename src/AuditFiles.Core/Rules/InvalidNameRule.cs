@@ -4,7 +4,8 @@ namespace AuditFiles.Core.Rules;
 
 /// <summary>
 /// Flags names that are structurally invalid for SharePoint: leading/trailing spaces, a trailing
-/// period, names that are too long, and names that collide with a reserved Windows or SharePoint name.
+/// period, consecutive periods in the middle of the name, names that are too long, and names that
+/// collide with a reserved Windows or SharePoint name.
 /// </summary>
 public sealed class InvalidNameRule : IAuditRule
 {
@@ -24,6 +25,12 @@ public sealed class InvalidNameRule : IAuditRule
                 "Le nom se termine par un point, ce qui n'est pas autorisé par SharePoint.");
         }
 
+        if (name.Contains(".."))
+        {
+            yield return Issue(entry, AuditIssueType.ConsecutivePeriodsInName,
+                "Le nom contient des points consécutifs (\"..\"), ce qui n'est pas autorisé par SharePoint.");
+        }
+
         if (name.Length > options.MaxNameLength)
         {
             yield return Issue(entry, AuditIssueType.NameTooLong,
@@ -32,15 +39,19 @@ public sealed class InvalidNameRule : IAuditRule
         }
 
         var nameWithoutExtension = Path.GetFileNameWithoutExtension(name);
-        var isReserved = SharePointLimits.ReservedNames.Contains(name)
+        var isReservedName = SharePointLimits.ReservedNames.Contains(name)
             || SharePointLimits.ReservedNames.Contains(nameWithoutExtension)
             || SharePointLimits.ReservedNamePrefixes.Any(prefix => name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
 
-        if (isReserved)
+        // SharePoint additionally refuses folder names starting with "~" outright, beyond the "~$"
+        // Office lock-file prefix (which applies to any entry, folders included).
+        var isReservedFolderPrefix = entry.Kind == ScanEntryKind.Folder && name.StartsWith('~');
+
+        if (isReservedName || isReservedFolderPrefix)
         {
             yield return Issue(entry, AuditIssueType.ReservedName,
-                "Le nom correspond à un nom réservé (nom de périphérique Windows, nom système SharePoint " +
-                "ou fichier de verrouillage Office) non autorisé par SharePoint.");
+                "Le nom correspond à un nom réservé (nom de périphérique Windows, nom système SharePoint, " +
+                "fichier de verrouillage Office, ou dossier commençant par « ~ ») non autorisé par SharePoint.");
         }
     }
 

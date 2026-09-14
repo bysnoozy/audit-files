@@ -19,7 +19,7 @@ public static class RemediationAdvice
         AuditIssueType.InvalidCharacterInName => (
             "Caractères interdits dans les noms",
             "Renommer les fichiers et dossiers concernés en supprimant les caractères non autorisés " +
-            "(\" * : < > ? / \\ | # %)."),
+            "(\" * : < > ? / \\ | { })."),
 
         AuditIssueType.NameStartsOrEndsWithSpace => (
             "Espaces en début ou fin de nom",
@@ -29,14 +29,19 @@ public static class RemediationAdvice
             "Nom se terminant par un point",
             "Renommer les éléments concernés en supprimant le point final."),
 
+        AuditIssueType.ConsecutivePeriodsInName => (
+            "Points consécutifs dans le nom",
+            "Renommer les éléments concernés en remplaçant les points consécutifs (\"..\") par un point " +
+            "unique ou un autre séparateur."),
+
         AuditIssueType.NameTooLong => (
             "Noms trop longs",
-            "Raccourcir le nom des fichiers ou dossiers concernés."),
+            "Raccourcir le nom des fichiers ou dossiers concernés (limite : 255 caractères par élément)."),
 
         AuditIssueType.ReservedName => (
             "Noms réservés",
             "Renommer les éléments concernés : leur nom est réservé par Windows ou par SharePoint " +
-            "(ex. CON, PRN, fichiers temporaires ~$...)."),
+            "(ex. CON, PRN, fichiers temporaires ~$..., dossiers commençant par ~)."),
 
         AuditIssueType.BlockedFileType => (
             "Types de fichiers bloqués",

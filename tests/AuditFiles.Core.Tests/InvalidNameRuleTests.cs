@@ -29,11 +29,22 @@ public class InvalidNameRuleTests
         Assert.Contains(issues, i => i.Type == AuditIssueType.NameEndsWithPeriod);
     }
 
+    [Fact]
+    public void Evaluate_ConsecutivePeriodsInName_ReturnsIssue()
+    {
+        var entry = MakeEntry("Version..finale.docx");
+
+        var issues = _rule.Evaluate(entry, _options).ToList();
+
+        Assert.Contains(issues, i => i.Type == AuditIssueType.ConsecutivePeriodsInName);
+    }
+
     [Theory]
     [InlineData("CON")]
     [InlineData("con.txt")]
     [InlineData("LPT1")]
     [InlineData("~$budget.xlsx")]
+    [InlineData(".lock")]
     public void Evaluate_ReservedName_ReturnsIssue(string name)
     {
         var entry = MakeEntry(name);
@@ -41,6 +52,28 @@ public class InvalidNameRuleTests
         var issues = _rule.Evaluate(entry, _options).ToList();
 
         Assert.Contains(issues, i => i.Type == AuditIssueType.ReservedName);
+    }
+
+    [Fact]
+    public void Evaluate_FolderStartingWithTilde_ReturnsReservedNameIssue()
+    {
+        var entry = MakeEntry("~backup", ScanEntryKind.Folder);
+
+        var issues = _rule.Evaluate(entry, _options).ToList();
+
+        Assert.Contains(issues, i => i.Type == AuditIssueType.ReservedName);
+    }
+
+    [Fact]
+    public void Evaluate_FileStartingWithTilde_WithoutDollarSign_ReturnsNoReservedNameIssue()
+    {
+        // The "starts with ~" rule is folder-specific; a file merely starting with "~" (not "~$")
+        // is not itself a reserved Office lock-file name.
+        var entry = MakeEntry("~backup.zip", ScanEntryKind.File);
+
+        var issues = _rule.Evaluate(entry, _options).ToList();
+
+        Assert.DoesNotContain(issues, i => i.Type == AuditIssueType.ReservedName);
     }
 
     [Fact]
@@ -63,12 +96,12 @@ public class InvalidNameRuleTests
         Assert.Empty(issues);
     }
 
-    private static ScanEntry MakeEntry(string name) => new()
+    private static ScanEntry MakeEntry(string name, ScanEntryKind kind = ScanEntryKind.File) => new()
     {
         FullPath = name,
         RelativePath = name,
         Name = name,
-        Kind = ScanEntryKind.File,
+        Kind = kind,
         SizeInBytes = 0,
         Depth = 1,
         LastModifiedUtc = DateTime.UtcNow,
